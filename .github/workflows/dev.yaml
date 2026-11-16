@@ -45,6 +45,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: ./Dockerfile
           push: true
           tags: ghassan04/fc27:latest
 
