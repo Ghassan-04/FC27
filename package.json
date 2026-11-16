@@ -1,0 +1,21 @@
+{
+  "name": "fc27-player-ratings",
+  "version": "1.0.0",
+  "description": "EA Sports FC 27 Player Ratings Database & Search Engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test/api.test.js"
+  },
+  "keywords": [
+    "fc27",
+    "fifa",
+    "ultimate-team",
+    "player-ratings",
+    "fut",
+    "ea-fc"
+  ],
+  "author": "",
+  "license": "MIT"
+}
