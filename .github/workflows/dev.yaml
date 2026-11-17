@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - dev
-
+env:
+  NODE_VERSION: 22
+  IMAGE_NAME: fc27
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -69,7 +71,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fc27:${{ steps.image.outputs.tag }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fc27:latest
 
       - name: Deploy #through SSH
       #  uses: appleboy/ssh-action@v1
