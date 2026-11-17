@@ -16,6 +16,25 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+      - name: Run ESLint
+        run: npm run lint
+            
+      - name: Generate NPM Security Report
+        if: always()
+        run: |
+          npm audit --json > npm-audit-report.json || true
+
+      - name: NPM Security Gate
+        if: always()
+        run: npm audit --audit-level=high
+      - name: Upload NPM Audit Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-security-report
+          path: npm-audit-report.json
+          if-no-files-found: ignore
+
 
       - name: Install dependencies
         run: npm install

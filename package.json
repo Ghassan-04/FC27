@@ -4,6 +4,7 @@
   "description": "EA Sports FC 27 Player Ratings Database & Search Engine",
   "main": "server.js",
   "scripts": {
+    "lint": "eslint .",
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node test/api.test.js"
@@ -17,5 +18,10 @@
     "ea-fc"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0"
+  }
 }
