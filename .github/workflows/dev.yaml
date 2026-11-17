@@ -68,7 +68,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghassan04/fc27:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fc27:${{ steps.image.outputs.tag }}
 
       - name: Deploy #through SSH
       #  uses: appleboy/ssh-action@v1

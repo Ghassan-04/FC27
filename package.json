@@ -5,9 +5,11 @@
   "main": "server.js",
   "scripts": {
     "lint": "eslint .",
-    "start": "node server.js",
-    "dev": "node server.js",
-    "test": "node test/api.test.js"
+    "format:check": "prettier --check .",
+    "test:unit": "jest --coverage",
+    "test:integration": "jest --config jest.integration.config.js",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "fc27",
