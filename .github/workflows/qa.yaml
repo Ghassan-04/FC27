@@ -1,12 +1,16 @@
 name: QA-CI-CD
 
 on:
-  workflow_run:
-    workflows: ["app-workfloww"]
-    types:
-      - completed
+  push:
     branches:
-      - dev
+      - qa
+ # workflow_run:
+  #  workflows: ["app-workfloww"]
+    #types:
+    #  - completed
+    #branches:
+     # - dev
+
 permissions:
   contents: read
   security-events: write
