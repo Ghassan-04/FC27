@@ -4,9 +4,7 @@ on:
   push:
     branches:
       - dev
-env:
-  NODE_VERSION: 22
-  IMAGE_NAME: fc27
+
 jobs:
   test:
     runs-on: ubuntu-latest
