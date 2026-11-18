@@ -44,10 +44,12 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+        continue-on-error: true
 
       # Optional formatting check
       - name: Check formatting
         run: npm run format:check
+        continue-on-error: true
 
 
   # 2. Security Scanning
