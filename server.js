@@ -83,6 +83,18 @@ function normalizeText(str) {
     .trim();
 }
 
+// API Handler: /health
+function handleHealthCheck() {
+  return {
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    service: 'fc27-player-ratings',
+    playersLoaded: players.length,
+    version: '1.0.0'
+  };
+}
+
 // API Handler: /api/players
 function handleGetPlayers(query) {
   let filtered = [...players];
@@ -350,6 +362,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   // API Routes
+  if (pathname === '/health' || pathname === '/api/health') {
+    const result = handleHealthCheck();
+    return sendJSON(res, 200, result);
+  }
+
   if (pathname === '/api/players') {
     const result = handleGetPlayers(parsedUrl.query);
     return sendJSON(res, 200, result);
