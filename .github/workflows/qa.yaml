@@ -44,12 +44,12 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
-        continue-on-error: true
+        #
 
       # Optional formatting check
       - name: Check formatting
         run: npm run format:check
-        continue-on-error: true
+        #
 
 
   # 2. Security Scanning
@@ -144,15 +144,15 @@ jobs:
 
       - name: Unit Tests
         run: npm run test:unit
-        continue-on-error: true
+        #
 
       - name: Integration Tests
         run: npm run test:integration
-        continue-on-error: true
+        #
 
       - name: Test Coverage
         run: npm run test:coverage
-        continue-on-error: true
+        #
 
 
 
