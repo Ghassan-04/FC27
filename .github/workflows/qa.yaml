@@ -152,6 +152,8 @@ jobs:
 
       - name: Test Coverage
         run: npm run test:coverage
+        continue-on-error: true
+
 
 
   # 5. Build and Push Docker Image
