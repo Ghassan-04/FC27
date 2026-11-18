@@ -33,7 +33,7 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf'
+  '.ttf': 'font/ttf',
 };
 
 // Helper: send JSON response
@@ -42,7 +42,7 @@ function sendJSON(res, statusCode, data) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(data));
 }
@@ -51,12 +51,14 @@ function sendJSON(res, statusCode, data) {
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
     req.on('end', () => {
       if (!body) return resolve({});
       try {
         resolve(JSON.parse(body));
-      } catch (err) {
+      } catch {
         resolve({});
       }
     });
@@ -69,7 +71,7 @@ const POSITION_GROUPS = {
   ATT: ['ST', 'CF', 'LW', 'RW'],
   MID: ['CAM', 'CM', 'CDM', 'LM', 'RM'],
   DEF: ['CB', 'LB', 'RB', 'LWB', 'RWB'],
-  GK: ['GK']
+  GK: ['GK'],
 };
 
 // Helper: normalize diacritics and special characters for search
@@ -91,7 +93,7 @@ function handleHealthCheck() {
     timestamp: new Date().toISOString(),
     service: 'fc27-player-ratings',
     playersLoaded: players.length,
-    version: '1.0.0'
+    version: '1.0.0',
   };
 }
 
@@ -102,12 +104,13 @@ function handleGetPlayers(query) {
   // Text search (name, commonName, club, league, nation)
   if (query.q) {
     const q = normalizeText(query.q);
-    filtered = filtered.filter(p =>
-      normalizeText(p.name).includes(q) ||
-      normalizeText(p.commonName).includes(q) ||
-      normalizeText(p.club).includes(q) ||
-      normalizeText(p.league).includes(q) ||
-      normalizeText(p.nation).includes(q)
+    filtered = filtered.filter(
+      (p) =>
+        normalizeText(p.name).includes(q) ||
+        normalizeText(p.commonName).includes(q) ||
+        normalizeText(p.club).includes(q) ||
+        normalizeText(p.league).includes(q) ||
+        normalizeText(p.nation).includes(q)
     );
   }
 
@@ -116,14 +119,15 @@ function handleGetPlayers(query) {
     const pos = query.position.toUpperCase();
     if (POSITION_GROUPS[pos]) {
       // Group match (ATT, MID, DEF, GK)
-      filtered = filtered.filter(p =>
-        POSITION_GROUPS[pos].includes(p.position) ||
-        (p.altPositions && p.altPositions.some(ap => POSITION_GROUPS[pos].includes(ap)))
+      filtered = filtered.filter(
+        (p) =>
+          POSITION_GROUPS[pos].includes(p.position) ||
+          (p.altPositions && p.altPositions.some((ap) => POSITION_GROUPS[pos].includes(ap)))
       );
     } else {
       // Exact position match
-      filtered = filtered.filter(p =>
-        p.position === pos || (p.altPositions && p.altPositions.includes(pos))
+      filtered = filtered.filter(
+        (p) => p.position === pos || (p.altPositions && p.altPositions.includes(pos))
       );
     }
   }
@@ -131,8 +135,8 @@ function handleGetPlayers(query) {
   // Rating range filter
   const ratingMin = parseInt(query.ratingMin, 10);
   const ratingMax = parseInt(query.ratingMax, 10);
-  if (!isNaN(ratingMin)) filtered = filtered.filter(p => p.rating >= ratingMin);
-  if (!isNaN(ratingMax)) filtered = filtered.filter(p => p.rating <= ratingMax);
+  if (!isNaN(ratingMin)) filtered = filtered.filter((p) => p.rating >= ratingMin);
+  if (!isNaN(ratingMax)) filtered = filtered.filter((p) => p.rating <= ratingMax);
 
   // Face Stat filters
   const paceMin = parseInt(query.paceMin, 10);
@@ -142,57 +146,60 @@ function handleGetPlayers(query) {
   const defendingMin = parseInt(query.defendingMin, 10);
   const physicalMin = parseInt(query.physicalMin, 10);
 
-  if (!isNaN(paceMin)) filtered = filtered.filter(p => (p.stats && p.stats.pac >= paceMin));
-  if (!isNaN(shootingMin)) filtered = filtered.filter(p => (p.stats && p.stats.sho >= shootingMin));
-  if (!isNaN(passingMin)) filtered = filtered.filter(p => (p.stats && p.stats.pas >= passingMin));
-  if (!isNaN(dribblingMin)) filtered = filtered.filter(p => (p.stats && p.stats.dri >= dribblingMin));
-  if (!isNaN(defendingMin)) filtered = filtered.filter(p => (p.stats && p.stats.def >= defendingMin));
-  if (!isNaN(physicalMin)) filtered = filtered.filter(p => (p.stats && p.stats.phy >= physicalMin));
+  if (!isNaN(paceMin)) filtered = filtered.filter((p) => p.stats && p.stats.pac >= paceMin);
+  if (!isNaN(shootingMin)) filtered = filtered.filter((p) => p.stats && p.stats.sho >= shootingMin);
+  if (!isNaN(passingMin)) filtered = filtered.filter((p) => p.stats && p.stats.pas >= passingMin);
+  if (!isNaN(dribblingMin))
+    filtered = filtered.filter((p) => p.stats && p.stats.dri >= dribblingMin);
+  if (!isNaN(defendingMin))
+    filtered = filtered.filter((p) => p.stats && p.stats.def >= defendingMin);
+  if (!isNaN(physicalMin)) filtered = filtered.filter((p) => p.stats && p.stats.phy >= physicalMin);
 
   // League filter
   if (query.league && query.league !== 'ALL') {
-    filtered = filtered.filter(p => p.league === query.league);
+    filtered = filtered.filter((p) => p.league === query.league);
   }
 
   // Nation filter
   if (query.nation && query.nation !== 'ALL') {
-    filtered = filtered.filter(p => p.nation === query.nation);
+    filtered = filtered.filter((p) => p.nation === query.nation);
   }
 
   // Club filter
   if (query.club && query.club !== 'ALL') {
-    filtered = filtered.filter(p => p.club === query.club);
+    filtered = filtered.filter((p) => p.club === query.club);
   }
 
   // Card Type filter
   if (query.cardType && query.cardType !== 'ALL') {
-    filtered = filtered.filter(p => p.cardType === query.cardType);
+    filtered = filtered.filter((p) => p.cardType === query.cardType);
   }
 
   // Gender filter
   if (query.gender && query.gender !== 'ALL') {
-    filtered = filtered.filter(p => p.gender === query.gender);
+    filtered = filtered.filter((p) => p.gender === query.gender);
   }
 
   // Foot filter
   if (query.foot && query.foot !== 'ALL') {
-    filtered = filtered.filter(p => p.foot === query.foot);
+    filtered = filtered.filter((p) => p.foot === query.foot);
   }
 
   // Skill moves min
   const skillMin = parseInt(query.skillMoves, 10);
-  if (!isNaN(skillMin)) filtered = filtered.filter(p => p.skillMoves >= skillMin);
+  if (!isNaN(skillMin)) filtered = filtered.filter((p) => p.skillMoves >= skillMin);
 
   // Weak foot min
   const weakFootMin = parseInt(query.weakFoot, 10);
-  if (!isNaN(weakFootMin)) filtered = filtered.filter(p => p.weakFoot >= weakFootMin);
+  if (!isNaN(weakFootMin)) filtered = filtered.filter((p) => p.weakFoot >= weakFootMin);
 
   // PlayStyle filter
   if (query.playstyle && query.playstyle !== 'ALL') {
     const ps = query.playstyle.toLowerCase();
-    filtered = filtered.filter(p =>
-      (p.playStylesPlus && p.playStylesPlus.some(psp => psp.toLowerCase().includes(ps))) ||
-      (p.playStyles && p.playStyles.some(pst => pst.toLowerCase().includes(ps)))
+    filtered = filtered.filter(
+      (p) =>
+        (p.playStylesPlus && p.playStylesPlus.some((psp) => psp.toLowerCase().includes(ps))) ||
+        (p.playStyles && p.playStyles.some((pst) => pst.toLowerCase().includes(ps)))
     );
   }
 
@@ -236,7 +243,7 @@ function handleGetPlayers(query) {
     page,
     limit,
     totalPages,
-    players: paginatedPlayers
+    players: paginatedPlayers,
   };
 }
 
@@ -249,24 +256,34 @@ function handleGetFilters() {
   const positions = new Map();
   const playStyles = new Set();
 
-  players.forEach(p => {
+  players.forEach((p) => {
     leagues.set(p.league, (leagues.get(p.league) || 0) + 1);
     nations.set(p.nation, (nations.get(p.nation) || 0) + 1);
     clubs.set(p.club, (clubs.get(p.club) || 0) + 1);
     cardTypes.set(p.cardType, (cardTypes.get(p.cardType) || 0) + 1);
     positions.set(p.position, (positions.get(p.position) || 0) + 1);
 
-    if (p.playStylesPlus) p.playStylesPlus.forEach(ps => playStyles.add(ps));
-    if (p.playStyles) p.playStyles.forEach(ps => playStyles.add(ps));
+    if (p.playStylesPlus) p.playStylesPlus.forEach((ps) => playStyles.add(ps));
+    if (p.playStyles) p.playStyles.forEach((ps) => playStyles.add(ps));
   });
 
   return {
-    leagues: Array.from(leagues.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-    nations: Array.from(nations.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-    clubs: Array.from(clubs.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-    cardTypes: Array.from(cardTypes.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-    positions: Array.from(positions.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-    playStyles: Array.from(playStyles).sort()
+    leagues: Array.from(leagues.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    nations: Array.from(nations.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    clubs: Array.from(clubs.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    cardTypes: Array.from(cardTypes.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    positions: Array.from(positions.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    playStyles: Array.from(playStyles).sort(),
   };
 }
 
@@ -277,7 +294,7 @@ function handlePackOpen() {
   const pack = shuffled.slice(0, 5);
 
   // Highest rated player in pack
-  const topPlayer = pack.reduce((prev, current) => (prev.rating > current.rating) ? prev : current);
+  const topPlayer = pack.reduce((prev, current) => (prev.rating > current.rating ? prev : current));
   const isWalkout = topPlayer.rating >= 88;
   const isBoard = topPlayer.rating >= 84 && topPlayer.rating < 88;
 
@@ -286,15 +303,15 @@ function handlePackOpen() {
     topPlayer,
     isWalkout,
     isBoard,
-    openedAt: new Date().toISOString()
+    openedAt: new Date().toISOString(),
   };
 }
 
 // API Handler: /api/compare
 function handleCompare(idsString) {
   if (!idsString) return [];
-  const ids = idsString.split(',').map(s => s.trim().toLowerCase());
-  return players.filter(p => ids.includes(p.id.toLowerCase()));
+  const ids = idsString.split(',').map((s) => s.trim().toLowerCase());
+  return players.filter((p) => ids.includes(p.id.toLowerCase()));
 }
 
 // API Handler: /api/squad/analyze
@@ -302,15 +319,23 @@ function handleAnalyzeSquad(playerIds) {
   if (!Array.isArray(playerIds) || playerIds.length === 0) {
     return { error: 'No players provided' };
   }
-  const squad = players.filter(p => playerIds.includes(p.id));
+  const squad = players.filter((p) => playerIds.includes(p.id));
   if (squad.length === 0) return { error: 'Players not found' };
 
   const avgRating = Math.round(squad.reduce((sum, p) => sum + p.rating, 0) / squad.length);
   const avgPace = Math.round(squad.reduce((sum, p) => sum + (p.stats?.pac || 0), 0) / squad.length);
-  const avgShooting = Math.round(squad.reduce((sum, p) => sum + (p.stats?.sho || 0), 0) / squad.length);
-  const avgPassing = Math.round(squad.reduce((sum, p) => sum + (p.stats?.pas || 0), 0) / squad.length);
-  const avgDefending = Math.round(squad.reduce((sum, p) => sum + (p.stats?.def || 0), 0) / squad.length);
-  const avgPhysical = Math.round(squad.reduce((sum, p) => sum + (p.stats?.phy || 0), 0) / squad.length);
+  const avgShooting = Math.round(
+    squad.reduce((sum, p) => sum + (p.stats?.sho || 0), 0) / squad.length
+  );
+  const avgPassing = Math.round(
+    squad.reduce((sum, p) => sum + (p.stats?.pas || 0), 0) / squad.length
+  );
+  const avgDefending = Math.round(
+    squad.reduce((sum, p) => sum + (p.stats?.def || 0), 0) / squad.length
+  );
+  const avgPhysical = Math.round(
+    squad.reduce((sum, p) => sum + (p.stats?.phy || 0), 0) / squad.length
+  );
   const totalValue = squad.reduce((sum, p) => sum + (p.priceEstimate || 0), 0);
 
   // Calculate chemistry preview based on club, nation, league matches
@@ -318,16 +343,22 @@ function handleAnalyzeSquad(playerIds) {
   const leagueCounts = {};
   const clubCounts = {};
 
-  squad.forEach(p => {
+  squad.forEach((p) => {
     nationCounts[p.nation] = (nationCounts[p.nation] || 0) + 1;
     leagueCounts[p.league] = (leagueCounts[p.league] || 0) + 1;
     clubCounts[p.club] = (clubCounts[p.club] || 0) + 1;
   });
 
   let chemPoints = 0;
-  Object.values(nationCounts).forEach(c => { if (c >= 2) chemPoints += c; });
-  Object.values(leagueCounts).forEach(c => { if (c >= 3) chemPoints += c * 1.2; });
-  Object.values(clubCounts).forEach(c => { if (c >= 2) chemPoints += c * 1.5; });
+  Object.values(nationCounts).forEach((c) => {
+    if (c >= 2) chemPoints += c;
+  });
+  Object.values(leagueCounts).forEach((c) => {
+    if (c >= 3) chemPoints += c * 1.2;
+  });
+  Object.values(clubCounts).forEach((c) => {
+    if (c >= 2) chemPoints += c * 1.5;
+  });
 
   const chemistry = Math.min(33, Math.round((chemPoints / (squad.length * 2)) * 33)) || 18;
 
@@ -341,7 +372,7 @@ function handleAnalyzeSquad(playerIds) {
     avgPhysical,
     totalValue,
     chemistry,
-    squad
+    squad,
   };
 }
 
@@ -356,7 +387,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Headers': 'Content-Type',
     });
     return res.end();
   }
@@ -374,13 +405,17 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/api/players/')) {
     const playerId = pathname.replace('/api/players/', '').trim();
-    const player = players.find(p => p.id.toLowerCase() === playerId.toLowerCase());
+    const player = players.find((p) => p.id.toLowerCase() === playerId.toLowerCase());
     if (!player) {
       return sendJSON(res, 404, { error: 'Player not found' });
     }
     // Find similar players (same position, close rating)
     const similarPlayers = players
-      .filter(p => p.id !== player.id && (p.position === player.position || Math.abs(p.rating - player.rating) <= 2))
+      .filter(
+        (p) =>
+          p.id !== player.id &&
+          (p.position === player.position || Math.abs(p.rating - player.rating) <= 2)
+      )
       .slice(0, 4);
 
     return sendJSON(res, 200, { player, similarPlayers });
@@ -420,12 +455,13 @@ const server = http.createServer(async (req, res) => {
       fastest,
       bestShooter,
       bestDribbler,
-      bestPasser
+      bestPasser,
     });
   }
 
   // Static File Serving
-  let filePath = pathname === '/' ? path.join(PUBLIC_DIR, 'index.html') : path.join(PUBLIC_DIR, pathname);
+  let filePath =
+    pathname === '/' ? path.join(PUBLIC_DIR, 'index.html') : path.join(PUBLIC_DIR, pathname);
 
   // Security: prevent path traversal
   const normalizedPath = path.normalize(filePath);
@@ -454,7 +490,7 @@ const server = http.createServer(async (req, res) => {
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-cache',
     });
 
     const stream = fs.createReadStream(normalizedPath);
@@ -473,10 +509,11 @@ if (require.main === module) {
 
 module.exports = {
   server,
+  handleHealthCheck,
   handleGetPlayers,
   handleGetFilters,
   handlePackOpen,
   handleCompare,
   handleAnalyzeSquad,
-  players
+  players,
 };
