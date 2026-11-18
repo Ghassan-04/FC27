@@ -209,13 +209,12 @@ jobs:
         run: |
           docker pull  ${{ vars.DOCKERHUB_USERNAME }}/fc27:latest
 
-      - name: Stop Existing Container
-        run: |
-          docker stop fc27-qa || true
-          docker rm fc27-qa || true
+
 
       - name: Run QA Container
         run: |
+          docker stop fc27-qa || true
+          docker rm fc27-qa || true
           docker run -d \
             --name fc27-qa \
             --restart unless-stopped \
