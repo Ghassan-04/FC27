@@ -1,4 +1,4 @@
-name: app-workfloww
+name: app-workflow
 
 on:
   push:
