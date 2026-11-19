@@ -26,7 +26,8 @@ jobs:
       - name: Identify the merged DEV pull request
         id: resolve
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }
+          GH_REPO: ${{ github.repository }}   # <
           QA_MERGE_SHA: ${{ github.sha }}
           DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
         run: |
