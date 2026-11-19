@@ -220,7 +220,7 @@ jobs:
   qa-validation:
     name: QA Functional and E2E Tests
     needs: [resolve-dev-image, deploy-qa]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout the exact DEV source commit
         uses: actions/checkout@v4
@@ -247,7 +247,7 @@ jobs:
   dast:
     name: DAST (OWASP ZAP baseline)
     needs: deploy-qa
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
     steps:
       - name: Wait for the QA app to respond
