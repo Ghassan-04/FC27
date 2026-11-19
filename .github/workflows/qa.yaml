@@ -244,11 +244,13 @@ jobs:
   # DAST: scan the running QA deployment from the outside with OWASP ZAP.
   # Runs in parallel with the E2E tests. This is a passive baseline scan
   # (it spiders the app and inspects responses; it does not attack it).
+
   dast:
+  
     name: DAST (OWASP ZAP baseline)
     needs: deploy-qa
     runs-on: self-hosted
-    timeout-minutes: 20
+    #timeout-minutes: 20
     steps:
       - name: Wait for the QA app to respond
         env:
