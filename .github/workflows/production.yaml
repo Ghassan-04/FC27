@@ -79,7 +79,7 @@ jobs:
 
   deploy-production:
     name: Deploy to Production on AWS EC2
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: resolve-image
     timeout-minutes: 15
     # Configure required reviewers and a main-only branch restriction on this
@@ -93,12 +93,11 @@ jobs:
           IMAGE: ${{ needs.resolve-image.outputs.image }}
           DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT }}
-          envs: IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+        #with:
+        ## username: ${{ secrets.PROD_USER }}
+         # key: ${{ secrets.PROD_SSH_KEY }}
+          #port: ${{ secrets.PROD_PORT }}
+          #envs: IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             set -e
 
