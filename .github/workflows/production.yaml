@@ -77,98 +77,95 @@ jobs:
           echo "Production will deploy QA-approved image: $TAG_REF"
           echo "Pinned to digest: $IMAGE"
 
-  
-  deploy-production:
-    name: Deploy to Production on AWS EC2
-    runs-on: self-hosted
-    needs: resolve-image
-    timeout-minutes: 15
+deploy-production:
+  name: Deploy to Production on AWS EC2
+  runs-on: self-hosted
+  needs: resolve-image
+  timeout-minutes: 15
 
-    environment:
-      name: production
+  environment:
+    name: production
 
-    steps:
-      - name: Deploy the exact QA-tested image to AWS EC2
-        uses: appleboy/ssh-action@v1.2.2
-        env:
-          IMAGE: ${{ needs.resolve-image.outputs.image }}
-          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT }}
-          envs: IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
-          script: |
-            set -e
+  steps:
+    - name: Deploy the exact QA-tested image
+      env:
+        IMAGE: ${{ needs.resolve-image.outputs.image }}
+        DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
+        DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            HEALTH_URL="http://127.0.0.1/"
+      run: |
+        set -e
 
-            wait_healthy() {
-              for i in $(seq 1 20); do
-                if curl -fsS --max-time 2 "$HEALTH_URL" > /dev/null; then
-                  return 0
-                fi
-                echo "Waiting for application..."
-                sleep 3
-              done
-              return 1
-            }
+        HEALTH_URL="http://127.0.0.1/"
 
-            echo "$DOCKERHUB_TOKEN" | docker login \
-              --username "$DOCKERHUB_USERNAME" \
-              --password-stdin
-
-            echo "Pulling QA-tested image: $IMAGE"
-            docker pull "$IMAGE"
-
-            # Save the previous image for rollback.
-            PREVIOUS_IMAGE=$(docker inspect \
-              --format='{{.Config.Image}}' \
-              fc27-prod 2>/dev/null || true)
-
-            if [ -n "$PREVIOUS_IMAGE" ]; then
-              docker tag "$PREVIOUS_IMAGE" fc27-prod:rollback
+        wait_healthy() {
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 2 "$HEALTH_URL" > /dev/null; then
+              return 0
             fi
 
-            docker rm -f fc27-prod || true
+            echo "Waiting for application..."
+            sleep 3
+          done
 
-            docker run -d \
-              --name fc27-prod \
-              --restart unless-stopped \
-              -p 80:3000 \
-              "$IMAGE"
+          return 1
+        }
 
-            echo "Checking production health..."
+        echo "$DOCKERHUB_TOKEN" | docker login \
+          --username "$DOCKERHUB_USERNAME" \
+          --password-stdin
 
-            if wait_healthy; then
-              echo "Production deployment successful!"
-              docker image prune -f || true
-              exit 0
-            fi
+        echo "Pulling QA-tested image: $IMAGE"
+        docker pull "$IMAGE"
 
-            echo "Health check failed. Rolling back..."
+        # Save previous image for rollback
+        PREVIOUS_IMAGE=$(docker inspect \
+          --format='{{.Config.Image}}' \
+          fc27-prod 2>/dev/null || true)
 
-            docker logs fc27-prod || true
-            docker rm -f fc27-prod || true
+        if [ -n "$PREVIOUS_IMAGE" ]; then
+          docker tag "$PREVIOUS_IMAGE" fc27-prod:rollback
+        fi
 
-            if [ -z "$PREVIOUS_IMAGE" ]; then
-              echo "No previous image available for rollback."
-              exit 1
-            fi
+        # Stop previous container
+        docker rm -f fc27-prod || true
 
-            docker run -d \
-              --name fc27-prod \
-              --restart unless-stopped \
-              -p 80:3000 \
-              fc27-prod:rollback
+        # Deploy new container
+        docker run -d \
+          --name fc27-prod \
+          --restart unless-stopped \
+          -p 80:3000 \
+          "$IMAGE"
 
-            if wait_healthy; then
-              echo "Rollback succeeded."
-            else
-              echo "Rollback failed. Manual intervention required."
-              docker logs fc27-prod || true
-            fi
+        echo "Checking production health..."
 
-            exit 1
+        if wait_healthy; then
+          echo "Production deployment successful!"
+          docker image prune -f || true
+          exit 0
+        fi
+
+        echo "Health check failed. Rolling back..."
+
+        docker logs fc27-prod || true
+        docker rm -f fc27-prod || true
+
+        if [ -z "$PREVIOUS_IMAGE" ]; then
+          echo "No previous image available for rollback."
+          exit 1
+        fi
+
+        docker run -d \
+          --name fc27-prod \
+          --restart unless-stopped \
+          -p 80:3000 \
+          fc27-prod:rollback
+
+        if wait_healthy; then
+          echo "Rollback succeeded."
+        else
+          echo "Rollback failed. Manual intervention required."
+          docker logs fc27-prod || true
+        fi
+
+        exit 1
