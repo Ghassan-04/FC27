@@ -77,15 +77,16 @@ jobs:
           echo "Production will deploy QA-approved image: $TAG_REF"
           echo "Pinned to digest: $IMAGE"
 
+  
   deploy-production:
     name: Deploy to Production on AWS EC2
     runs-on: self-hosted
     needs: resolve-image
     timeout-minutes: 15
-    # Configure required reviewers and a main-only branch restriction on this
-    # environment in Settings > Environments > production.
-   # environment:
-    #  name: production
+
+    environment:
+      name: production
+
     steps:
       - name: Deploy the exact QA-tested image to AWS EC2
         uses: appleboy/ssh-action@v1.2.2
@@ -93,15 +94,15 @@ jobs:
           IMAGE: ${{ needs.resolve-image.outputs.image }}
           DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        #with:
-        ## username: ${{ secrets.PROD_USER }}
-         # key: ${{ secrets.PROD_SSH_KEY }}
-          #port: ${{ secrets.PROD_PORT }}
-          #envs: IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          envs: IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             set -e
 
-            # Change to your real health endpoint if the app has one (e.g. /health).
             HEALTH_URL="http://127.0.0.1/"
 
             wait_healthy() {
@@ -122,10 +123,14 @@ jobs:
             echo "Pulling QA-tested image: $IMAGE"
             docker pull "$IMAGE"
 
-            # Keep the previous image reference for rollback.
+            # Save the previous image for rollback.
             PREVIOUS_IMAGE=$(docker inspect \
               --format='{{.Config.Image}}' \
               fc27-prod 2>/dev/null || true)
+
+            if [ -n "$PREVIOUS_IMAGE" ]; then
+              docker tag "$PREVIOUS_IMAGE" fc27-prod:rollback
+            fi
 
             docker rm -f fc27-prod || true
 
@@ -136,19 +141,20 @@ jobs:
               "$IMAGE"
 
             echo "Checking production health..."
+
             if wait_healthy; then
               echo "Production deployment successful!"
-              # Remove dangling layers only; the previous image stays for rollback.
               docker image prune -f || true
               exit 0
             fi
 
-            echo "Health check failed; attempting rollback."
+            echo "Health check failed. Rolling back..."
+
             docker logs fc27-prod || true
             docker rm -f fc27-prod || true
 
             if [ -z "$PREVIOUS_IMAGE" ]; then
-              echo "No previous image to roll back to. Production is DOWN."
+              echo "No previous image available for rollback."
               exit 1
             fi
 
@@ -156,14 +162,13 @@ jobs:
               --name fc27-prod \
               --restart unless-stopped \
               -p 80:3000 \
-              "$PREVIOUS_IMAGE"
+              fc27-prod:rollback
 
             if wait_healthy; then
-              echo "Rollback succeeded; previous version is serving traffic."
+              echo "Rollback succeeded."
             else
-              echo "Rollback ALSO failed. Production is DOWN. Manual intervention needed."
+              echo "Rollback failed. Manual intervention required."
               docker logs fc27-prod || true
             fi
 
-            # Always fail the job so the bad deploy is visible.
             exit 1
