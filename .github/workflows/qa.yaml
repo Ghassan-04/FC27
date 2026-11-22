@@ -252,6 +252,10 @@ jobs:
     runs-on: self-hosted
     #timeout-minutes: 20
     steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Wait for the QA app to respond
         env:
           TARGET_URL: ${{ secrets.QA_URL }}
