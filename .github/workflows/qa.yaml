@@ -214,7 +214,7 @@ jobs:
           docker run -d \
             --name fc27-qa \
             --restart unless-stopped \
-            -p 3000:3000 \
+            -p 3001:3000 \
             "$IMAGE"
 
   qa-validation:
