@@ -53,7 +53,7 @@ jobs:
   build-and-deploy-dev:
     name: Build once and deploy to DEV
     needs: test
-    runs-on: self-hosted
+    runs-on: [self-hosted, devv]
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

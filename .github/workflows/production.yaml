@@ -79,7 +79,7 @@ jobs:
 
   deploy-production:
     name: Deploy to Production on AWS EC2
-    runs-on: self-hosted
+    runs-on: [self-hosted, prod]
     needs: resolve-image
     timeout-minutes: 15
 
