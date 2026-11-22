@@ -190,7 +190,7 @@ jobs:
   deploy-qa:
     name: Deploy the DEV-built image to QA
     needs: [resolve-dev-image, verify-image]
-    runs-on: self-hosted
+    runs-on: [self-hosted, dev]
     steps:
       - name: Login to Docker Hub
         env:
@@ -220,7 +220,7 @@ jobs:
   qa-validation:
     name: QA Functional and E2E Tests
     needs: [resolve-dev-image, deploy-qa]
-    runs-on: self-hosted
+    runs-on: [self-hosted, dev]
     steps:
       - name: Checkout the exact DEV source commit
         uses: actions/checkout@v4
@@ -249,7 +249,7 @@ jobs:
   
     name: DAST (OWASP ZAP baseline)
     needs: deploy-qa
-    runs-on: self-hosted
+    runs-on: [self-hosted, dev]
     #timeout-minutes: 20
     steps:
       - name: Setup Node.js
