@@ -3,6 +3,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const {
+  handleHealthCheck,
   handleGetPlayers,
   handleGetFilters,
   handlePackOpen,
@@ -95,4 +96,13 @@ assert(fs.existsSync(cssPath) && fs.statSync(cssPath).size > 1000, 'style.css sh
 assert(fs.existsSync(jsPath) && fs.statSync(jsPath).size > 1000, 'app.js should exist');
 console.log(`✅ All frontend assets verified (HTML: ${fs.statSync(indexPath).size}B, CSS: ${fs.statSync(cssPath).size}B, JS: ${fs.statSync(jsPath).size}B).`);
 
-console.log('\n🎉 ALL 11 TESTS PASSED SUCCESSFULLY! 🚀');
+// Test 12: Health check endpoint
+console.log('\nTest 12: Health check endpoint');
+const health = handleHealthCheck();
+assert.strictEqual(health.status, 'ok', 'Status should be ok');
+assert(typeof health.uptime === 'number' && health.uptime >= 0, 'Uptime should be a number >= 0');
+assert(health.playersLoaded >= 70, 'Players loaded should be at least 70');
+assert.strictEqual(health.service, 'fc27-player-ratings', 'Service name should match');
+console.log(`✅ Health check verified: status=${health.status}, uptime=${health.uptime.toFixed(2)}s, playersLoaded=${health.playersLoaded}.`);
+
+console.log('\n🎉 ALL 12 TESTS PASSED SUCCESSFULLY! 🚀');

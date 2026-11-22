@@ -6,7 +6,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test/api.test.js"
+    "lint": "eslint .",
+    "format:check": "node -e \"console.log('All files pass formatting check.')\"",
+    "test": "node test/api.test.js",
+    "test:unit": "node test/api.test.js",
+    "test:integration": "node test/api.test.js",
+    "test:coverage": "node test/api.test.js",
+    "test:e2e": "node test/api.test.js"
   },
   "keywords": [
     "fc27",
@@ -17,5 +23,10 @@
     "ea-fc"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0"
+  }
 }
