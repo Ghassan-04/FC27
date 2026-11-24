@@ -3,8 +3,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+<<<<<<< HEAD
 const { checkDb } = require('./db');
 const { handleAccountRoutes } = require('./accounts');
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -55,10 +58,13 @@ function parseBody(req) {
     let body = '';
     req.on('data', (chunk) => {
       body += chunk;
+<<<<<<< HEAD
       if (body.length > 100 * 1024) {
         req.destroy(); // refuse oversized bodies
         resolve({});
       }
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
     });
     req.on('end', () => {
       if (!body) return resolve({});
@@ -388,11 +394,14 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
   const method = req.method;
 
+<<<<<<< HEAD
   // Basic security headers on every response
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
 
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
   // Handle CORS Preflight
   if (method === 'OPTIONS') {
     res.writeHead(204, {
@@ -403,20 +412,26 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+<<<<<<< HEAD
   // Accounts & per-user squad (login required, needs the database)
   if (await handleAccountRoutes(req, res, pathname)) return;
 
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
   // API Routes
   if (pathname === '/health' || pathname === '/api/health') {
     const result = handleHealthCheck();
     return sendJSON(res, 200, result);
   }
 
+<<<<<<< HEAD
   if (pathname === '/api/health/db') {
     const ok = await checkDb();
     return sendJSON(res, ok ? 200 : 503, { database: ok ? 'up' : 'down' });
   }
 
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
   if (pathname === '/api/players') {
     const result = handleGetPlayers(parsedUrl.query);
     return sendJSON(res, 200, result);

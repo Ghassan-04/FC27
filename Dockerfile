@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 FROM node:22-alpine
 
 WORKDIR /app
@@ -14,3 +15,20 @@ EXPOSE 3000
 USER node
 
 CMD ["node", "server.js"]
+=======
+FROM node
+
+WORKDIR /app
+
+COPY package*.json .
+
+RUN npm install
+COPY . . 
+EXPOSE 3000
+ENV PORT=3000
+
+CMD ["npm", "start"]
+
+
+
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5

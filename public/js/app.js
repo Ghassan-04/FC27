@@ -31,7 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Compare & Squad List
   let compareIds = [];
   let squadIds = JSON.parse(localStorage.getItem('fc27_squad') || '[]');
+<<<<<<< HEAD
   let currentUser = null; // { username } when logged in; the squad then lives on the server
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
 
   // Cached data
   let allFilters = null;
@@ -1030,7 +1033,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       squadIds.push(player.id);
     }
+<<<<<<< HEAD
     persistSquad();
+=======
+    localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
     updateSquadBadge();
     renderResults();
   }
@@ -1112,7 +1119,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-id');
           squadIds = squadIds.filter(sid => sid !== id);
+<<<<<<< HEAD
           persistSquad();
+=======
+          localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
           updateSquadBadge();
           renderResults();
           openSquadModal();
@@ -1121,7 +1132,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.getElementById('clear-squad-btn')?.addEventListener('click', () => {
         squadIds = [];
+<<<<<<< HEAD
         persistSquad();
+=======
+        localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
         updateSquadBadge();
         renderResults();
         squadModal.classList.remove('active');
@@ -1476,6 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     packModal.classList.add('active');
   });
 
+<<<<<<< HEAD
 
   // -------------------------------------------------------------
   // ACCOUNTS: login / register / per-user squad stored on the server
@@ -1624,6 +1640,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   authNavBtn.addEventListener('click', () => openAuthModal('login'));
 
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
   // Modal Close buttons & backdrop clicks
   document.querySelectorAll('.modal-close-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1631,11 +1649,18 @@ document.addEventListener('DOMContentLoaded', () => {
       compareModal.classList.remove('active');
       squadModal.classList.remove('active');
       packModal.classList.remove('active');
+<<<<<<< HEAD
       authModal.classList.remove('active');
     });
   });
 
   [detailModal, compareModal, squadModal, packModal, authModal].forEach(modal => {
+=======
+    });
+  });
+
+  [detailModal, compareModal, squadModal, packModal].forEach(modal => {
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.remove('active');
     });
@@ -1648,9 +1673,14 @@ document.addEventListener('DOMContentLoaded', () => {
       compareModal.classList.remove('active');
       squadModal.classList.remove('active');
       packModal.classList.remove('active');
+<<<<<<< HEAD
       authModal.classList.remove('active');
     }
     if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+=======
+    }
+    if (e.key === '/' && document.activeElement !== searchInput && document.activeElement !== navSearchInput) {
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
       e.preventDefault();
       searchInput.focus();
     }
@@ -1667,5 +1697,8 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchFilters();
   fetchOverviewStats();
   fetchPlayers();
+<<<<<<< HEAD
   loadSession();
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
 });

@@ -87,6 +87,7 @@ jobs:
       name: production
 
     steps:
+<<<<<<< HEAD
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -96,15 +97,22 @@ jobs:
           APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
         run: sh scripts/ensure-db.sh prod
 
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
       - name: Deploy the exact QA-tested image
         env:
           IMAGE: ${{ needs.resolve-image.outputs.image }}
           DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+<<<<<<< HEAD
           APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
 
         run: |
 
+=======
+
+        run: |
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
           set -e
 
           HEALTH_URL="http://127.0.0.1/"
@@ -145,9 +153,13 @@ jobs:
           docker run -d \
             --name fc27-prod \
             --restart unless-stopped \
+<<<<<<< HEAD
             --network fc27-prod-net \
             -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-prod-db:5432/fc27" \
             -p 127.0.0.1:8080:80 \
+=======
+            -p 80:3000 \
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
             "$IMAGE"
 
           echo "Checking production health..."
@@ -171,8 +183,11 @@ jobs:
           docker run -d \
             --name fc27-prod \
             --restart unless-stopped \
+<<<<<<< HEAD
             --network fc27-prod-net \
             -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-prod-db:5432/fc27" \
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
             -p 80:3000 \
             fc27-prod:rollback
 

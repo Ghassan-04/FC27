@@ -125,6 +125,7 @@ This verifies:
 ## 🎮 Keyboard Shortcuts
 - `/` : Focus search input
 - `Esc` : Close any open modal (Player Detail, Compare, Squad, Pack Opener)
+<<<<<<< HEAD
 
 ---
 
@@ -147,3 +148,5 @@ Without a database (`DATABASE_URL` unset) the app still works; the login button 
 **Run locally:** `cp .env.example .env`, set strong passwords, then `docker compose up -d --build`.
 **Schema:** `db/init/02-schema.sql` (runs once on an empty volume). Regenerate the player seed with `node scripts/generate-seed.js`.
 **Pipeline secrets:** `DEV_/QA_/PROD_DB_ADMIN_PASSWORD` and `DEV_/QA_/PROD_DB_APP_PASSWORD` (use `openssl rand -hex 24`).
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5

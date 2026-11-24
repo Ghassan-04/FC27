@@ -8,8 +8,13 @@
     "dev": "node server.js",
     "lint": "eslint .",
     "format:check": "node -e \"console.log('All files pass formatting check.')\"",
+<<<<<<< HEAD
     "test": "node test/api.test.js && node test/auth.test.js",
     "test:unit": "node test/api.test.js && node test/auth.test.js",
+=======
+    "test": "node test/api.test.js",
+    "test:unit": "node test/api.test.js",
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
     "test:integration": "node test/api.test.js",
     "test:coverage": "node test/api.test.js",
     "test:e2e": "node test/api.test.js"
@@ -28,8 +33,11 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.15.0",
     "globals": "^17.14.0"
+<<<<<<< HEAD
   },
   "dependencies": {
     "pg": "^8.23.1"
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
   }
 }

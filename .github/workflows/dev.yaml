@@ -79,6 +79,7 @@ jobs:
             ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:dev-latest
 
+<<<<<<< HEAD
       - name: Ensure the DEV database is running
         env:
           POSTGRES_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
@@ -89,13 +90,21 @@ jobs:
         env:
           IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
+=======
+      - name: Deploy the exact DEV image
+        env:
+          IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
         run: |
           docker pull "$IMAGE"
           docker rm -f app || true
           docker run -d \
             --name app \
             --restart unless-stopped \
+<<<<<<< HEAD
             --network fc27-dev-net \
             -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-dev-db:5432/fc27" \
+=======
+>>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
             -p 3000:3000 \
             "$IMAGE"
