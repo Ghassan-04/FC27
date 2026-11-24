@@ -125,3 +125,25 @@ This verifies:
 ## 🎮 Keyboard Shortcuts
 - `/` : Focus search input
 - `Esc` : Close any open modal (Player Detail, Compare, Squad, Pack Opener)
+
+---
+
+## 🔐 Accounts & Database (PostgreSQL)
+
+Users can register / log in and their **Dream XI is stored per user** in PostgreSQL.
+Without a database (`DATABASE_URL` unset) the app still works; the login button just reports that accounts are unavailable and the squad stays in `localStorage`.
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Create account `{username, password}` and log in |
+| `POST` | `/api/auth/login` | Log in |
+| `POST` | `/api/auth/logout` | Log out (deletes the session) |
+| `GET` | `/api/auth/me` | Current user or `null` |
+| `GET` / `PUT` | `/api/squad` | Read / replace the logged-in user's squad `{playerIds: [...]}` (max 11) |
+| `GET` | `/api/health/db` | Database reachability |
+
+**Security design:** passwords hashed with scrypt + per-user salt; random 256-bit session tokens stored only as SHA-256 hashes; `HttpOnly` + `SameSite=Lax` cookie (add `COOKIE_SECURE=true` behind HTTPS); same-origin + JSON-only checks on writes; login rate limiting; parameterised SQL only; the app connects with a limited DB user (no DDL, read-only on `players`); the DB port is never published.
+
+**Run locally:** `cp .env.example .env`, set strong passwords, then `docker compose up -d --build`.
+**Schema:** `db/init/02-schema.sql` (runs once on an empty volume). Regenerate the player seed with `node scripts/generate-seed.js`.
+**Pipeline secrets:** `DEV_/QA_/PROD_DB_ADMIN_PASSWORD` and `DEV_/QA_/PROD_DB_APP_PASSWORD` (use `openssl rand -hex 24`).

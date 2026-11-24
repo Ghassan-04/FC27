@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let compareIds = [];
   let squadIds = JSON.parse(localStorage.getItem('fc27_squad') || '[]');
 
+  let currentUser = null; // { username } when logged in; the squad then lives on the server
+
+
   // Cached data
   let allFilters = null;
   let currentResults = null;
@@ -1029,7 +1032,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       squadIds.push(player.id);
     }
-    localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+
+    persistSquad();
     updateSquadBadge();
     renderResults();
   }
@@ -1111,7 +1115,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-id');
           squadIds = squadIds.filter(sid => sid !== id);
-          localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+
+          persistSquad();
           updateSquadBadge();
           renderResults();
           openSquadModal();
@@ -1120,7 +1125,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.getElementById('clear-squad-btn')?.addEventListener('click', () => {
         squadIds = [];
-        localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+
+        persistSquad();
         updateSquadBadge();
         renderResults();
         squadModal.classList.remove('active');
@@ -1475,6 +1481,154 @@ document.addEventListener('DOMContentLoaded', () => {
     packModal.classList.add('active');
   });
 
+
+  // -------------------------------------------------------------
+  // ACCOUNTS: login / register / per-user squad stored on the server
+  // -------------------------------------------------------------
+  const authModal = document.getElementById('auth-modal');
+  const authNavBtn = document.getElementById('auth-nav-btn');
+  const authNavLabel = document.getElementById('auth-nav-label');
+  let saveChain = Promise.resolve(); // keeps squad saves in order
+
+  async function apiJson(url, method, body) {
+    const res = await fetch(url, {
+      method,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    let data = {};
+    try { data = await res.json(); } catch { /* empty body */ }
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  // Anonymous visitors keep the squad in localStorage; logged-in users save it to their account.
+  function persistSquad() {
+    if (!currentUser) {
+      localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+      return;
+    }
+    saveChain = saveChain
+      .then(() => apiJson('/api/squad', 'PUT', { playerIds: [...squadIds] }))
+      .then((r) => {
+        if (r.status === 401) {
+          currentUser = null;
+          localStorage.setItem('fc27_squad', JSON.stringify(squadIds));
+          updateAuthUI();
+          alert('Your session expired. Please log in again to keep saving your squad.');
+        } else if (!r.ok) {
+          alert('Could not save your squad: ' + (r.data.error || 'server error'));
+        }
+      })
+      .catch(() => alert('Could not reach the server to save your squad.'));
+  }
+
+  function updateAuthUI() {
+    authNavLabel.textContent = currentUser ? '👤 ' + currentUser.username : '👤 Log in';
+  }
+
+  // After login/register: load the account's squad (or upload the anonymous one if the account has none yet)
+  async function afterLogin(user) {
+    currentUser = user;
+    updateAuthUI();
+    const local = JSON.parse(localStorage.getItem('fc27_squad') || '[]');
+    const r = await apiJson('/api/squad', 'GET');
+    if (r.ok) {
+      if (r.data.playerIds.length === 0 && local.length > 0) {
+        squadIds = local.slice(0, 11);
+        persistSquad();
+      } else {
+        squadIds = r.data.playerIds;
+      }
+    }
+    localStorage.removeItem('fc27_squad');
+    updateSquadBadge();
+    renderResults();
+  }
+
+  async function loadSession() {
+    try {
+      const r = await apiJson('/api/auth/me', 'GET');
+      if (r.ok && r.data.user) await afterLogin(r.data.user);
+    } catch { /* accounts unavailable: stay anonymous */ }
+  }
+
+  function openAuthModal(mode) {
+    const body = document.getElementById('auth-modal-body');
+
+    if (currentUser) {
+      body.innerHTML = `
+        <h2 style="font-size: 1.5rem; font-weight: 900; margin-bottom: 0.5rem;">Your account</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Logged in as <strong id="auth-username"></strong>. Your Dream XI is saved to your account.</p>
+        <button class="auth-submit" id="auth-logout-btn">Log out</button>`;
+      document.getElementById('auth-username').textContent = currentUser.username;
+      document.getElementById('auth-logout-btn').addEventListener('click', async () => {
+        await apiJson('/api/auth/logout', 'POST', {});
+        currentUser = null;
+        squadIds = []; // do not leave the previous user's squad on a shared computer
+        localStorage.removeItem('fc27_squad');
+        updateAuthUI();
+        updateSquadBadge();
+        renderResults();
+        authModal.classList.remove('active');
+      });
+      authModal.classList.add('active');
+      return;
+    }
+
+    const isRegister = mode === 'register';
+    body.innerHTML = `
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab ${isRegister ? '' : 'active'}" data-mode="login">Log in</button>
+        <button type="button" class="auth-tab ${isRegister ? 'active' : ''}" data-mode="register">Register</button>
+      </div>
+      <form id="auth-form" novalidate>
+        <label class="auth-field"><span>Username</span>
+          <input id="auth-username-input" type="text" autocomplete="username" maxlength="30" required>
+          ${isRegister ? '<div class="auth-hint">3-30 characters: letters, numbers, underscore</div>' : ''}
+        </label>
+        <label class="auth-field"><span>Password</span>
+          <input id="auth-password-input" type="password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" maxlength="128" required>
+          ${isRegister ? '<div class="auth-hint">At least 10 characters</div>' : ''}
+        </label>
+        <div class="auth-error" id="auth-error" role="alert"></div>
+        <button class="auth-submit" type="submit" id="auth-submit-btn">${isRegister ? 'Create account' : 'Log in'}</button>
+      </form>`;
+
+    body.querySelectorAll('.auth-tab').forEach((tab) =>
+      tab.addEventListener('click', () => openAuthModal(tab.getAttribute('data-mode')))
+    );
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('auth-error');
+      const submitBtn = document.getElementById('auth-submit-btn');
+      errorEl.textContent = '';
+      submitBtn.disabled = true;
+      try {
+        const r = await apiJson(isRegister ? '/api/auth/register' : '/api/auth/login', 'POST', {
+          username: document.getElementById('auth-username-input').value.trim(),
+          password: document.getElementById('auth-password-input').value
+        });
+        if (r.ok) {
+          authModal.classList.remove('active');
+          await afterLogin(r.data.user);
+        } else {
+          errorEl.textContent = r.data.error || 'Something went wrong.';
+        }
+      } catch {
+        errorEl.textContent = 'Could not reach the server.';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    authModal.classList.add('active');
+    document.getElementById('auth-username-input').focus();
+  }
+
+  authNavBtn.addEventListener('click', () => openAuthModal('login'));
+
   // Modal Close buttons & backdrop clicks
   document.querySelectorAll('.modal-close-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1482,10 +1636,12 @@ document.addEventListener('DOMContentLoaded', () => {
       compareModal.classList.remove('active');
       squadModal.classList.remove('active');
       packModal.classList.remove('active');
+
+      authModal.classList.remove('active');
     });
   });
 
-  [detailModal, compareModal, squadModal, packModal].forEach(modal => {
+  [detailModal, compareModal, squadModal, packModal, authModal].forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.remove('active');
     });
@@ -1498,8 +1654,9 @@ document.addEventListener('DOMContentLoaded', () => {
       compareModal.classList.remove('active');
       squadModal.classList.remove('active');
       packModal.classList.remove('active');
+      authModal.classList.remove('active');
     }
-    if (e.key === '/' && document.activeElement !== searchInput && document.activeElement !== navSearchInput) {
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
       e.preventDefault();
       searchInput.focus();
     }
@@ -1516,4 +1673,6 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchFilters();
   fetchOverviewStats();
   fetchPlayers();
+
+  loadSession();
 });
