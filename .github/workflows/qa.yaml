@@ -27,7 +27,7 @@ jobs:
         id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}   # <
+          GH_REPO: ${{ github.repository }}
           QA_MERGE_SHA: ${{ github.sha }}
           DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
         run: |
@@ -260,83 +260,86 @@ jobs:
   # (it spiders the app and inspects responses; it does not attack it).
 
   dast:
-    - name: DAST (OWASP ZAP baseline)
-      needs: deploy-qa
-      runs-on: [self-hosted, dev]
-      timeout-minutes: 20
+    name: DAST (OWASP ZAP baseline)
+    needs: deploy-qa
+    runs-on: [self-hosted, dev]
+    timeout-minutes: 20
+    steps:
+    - name: Wait for the QA app to respond
+      env:
+        TARGET_URL: ${{ secrets.QA_URL }}
+      run: |
+        if [ -z "$TARGET_URL" ]; then
+          echo "QA_URL secret is EMPTY"
+          exit 1
+        fi
 
-      steps:
-        - name: Wait for the QA app to respond
-          env:
-            TARGET_URL: ${{ secrets.QA_URL }}
-          run: |
-            if [ -z "$TARGET_URL" ]; then
-              echo "QA_URL secret is EMPTY"
-              exit 1
-            fi
+        echo "Checking QA application..."
 
-            echo "Checking QA application..."
+        for i in $(seq 1 20); do
+          if curl -fsS --max-time 5 "$TARGET_URL" > /dev/null; then
+            echo "QA app is up."
+            exit 0
+          fi
 
-            for i in $(seq 1 20); do
-              if curl -fsS --max-time 5 "$TARGET_URL" > /dev/null; then
-                echo "QA app is up."
-                exit 0
-              fi
+          echo "Waiting for QA app..."
+          sleep 5
+        done
 
-              echo "Waiting for QA app..."
-              sleep 5
-            done
+        echo "QA app did not become reachable."
+        exit 1
 
-            echo "QA app did not become reachable."
-            exit 1
+    - name: Run ZAP baseline scan
+      env:
+        TARGET_URL: ${{ secrets.QA_URL }}
+      run: |
+        mkdir -p zap-wrk
+        chmod 777 zap-wrk
 
-        - name: Run ZAP baseline scan
-          env:
-            TARGET_URL: ${{ secrets.QA_URL }}
-          run: |
-            mkdir -p zap-wrk
-            chmod 777 zap-wrk
+        docker run --rm \
+          -v "$(pwd)/zap-wrk:/zap/wrk:rw" \
+          ghcr.io/zaproxy/zaproxy:stable \
+          zap-baseline.py \
+            -t "$TARGET_URL" \
+            -J zap-report.json \
+            -r zap-report.html \
+            -I
 
-            docker run --rm \
-              -v "$(pwd)/zap-wrk:/zap/wrk:rw" \
-              ghcr.io/zaproxy/zaproxy:stable \
-              zap-baseline.py \
-                -t "$TARGET_URL" \
-                -J zap-report.json \
-                -r zap-report.html \
-                -I
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
-        - name: DAST gate - HIGH alerts
-          run: |
-            node -e '
-            const report = require("./zap-wrk/zap-report.json");
-            const alerts = report.site.flatMap((s) => s.alerts);
+    - name: DAST gate - HIGH alerts
+      run: |
+        node -e '
+        const report = require("./zap-wrk/zap-report.json");
+        const alerts = report.site.flatMap((s) => s.alerts);
 
-            const high = alerts.filter((a) => a.riskcode === "3");
-            const medium = alerts.filter((a) => a.riskcode === "2");
+        const high = alerts.filter((a) => a.riskcode === "3");
+        const medium = alerts.filter((a) => a.riskcode === "2");
 
-            console.log("High:", high.length, "Medium:", medium.length);
+        console.log("High:", high.length, "Medium:", medium.length);
 
-            high.forEach((a) => console.error("HIGH:", a.name));
+        high.forEach((a) => console.error("HIGH:", a.name));
 
-            if (high.length > 0) {
-              console.error("DAST gate failed!");
-              process.exit(1);
-            }
+        if (high.length > 0) {
+          console.error("DAST gate failed!");
+          process.exit(1);
+        }
 
-            console.log("DAST gate passed!");
-            '
+        console.log("DAST gate passed!");
+        '
 
-        - name: Upload DAST report
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: zap-dast-report
-            path: |
-              zap-wrk/zap-report.html
-              zap-wrk/zap-report.json
-            if-no-files-found: ignore
-
+    - name: Upload DAST report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: zap-dast-report
+        path: |
+          zap-wrk/zap-report.html
+          zap-wrk/zap-report.json
+        if-no-files-found: ignore
 
   # Configure required reviewers for this GitHub Environment to make this
   # an actual manual QA approval gate.

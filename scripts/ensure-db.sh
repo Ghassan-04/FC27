@@ -32,7 +32,7 @@ fi
 
 echo "Waiting for PostgreSQL..."
 for i in $(seq 1 30); do
-  if docker exec "$DB" pg_isready -U _admin -d fc27 >/dev/null 2>&1; then
+  if docker exec "$DB" pg_isready -U admin -d fc27 >/dev/null 2>&1; then
     echo "PostgreSQL is ready."
     exit 0
   fi

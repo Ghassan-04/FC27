@@ -1812,7 +1812,6 @@ button, input, select {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 }
-<<<<<<< HEAD
 
 /* ---------- Login / Register ---------- */
 .auth-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
@@ -1835,5 +1834,4 @@ button, input, select {
   font-weight: 900; background: var(--fc-volt); color: #000;
 }
 .auth-submit:disabled { opacity: 0.6; cursor: wait; }
-=======
->>>>>>> 34b23df9b90a8b29dc8db3facffc21cad1b306b5
+
