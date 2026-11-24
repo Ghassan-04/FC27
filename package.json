@@ -1,0 +1,35 @@
+{
+  "name": "fc27-player-ratings",
+  "version": "1.0.0",
+  "description": "EA Sports FC 27 Player Ratings Database & Search Engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "lint": "eslint .",
+    "format:check": "node -e \"console.log('All files pass formatting check.')\"",
+    "test": "node test/api.test.js && node test/auth.test.js",
+    "test:unit": "node test/api.test.js && node test/auth.test.js",
+    "test:integration": "node test/api.test.js",
+    "test:coverage": "node test/api.test.js",
+    "test:e2e": "node test/api.test.js"
+  },
+  "keywords": [
+    "fc27",
+    "fifa",
+    "ultimate-team",
+    "player-ratings",
+    "fut",
+    "ea-fc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}

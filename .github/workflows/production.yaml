@@ -1,0 +1,186 @@
+name: Production-CI-CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: fc27
+  DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+
+jobs:
+  # Find the QA branch commit that was merged into main, then pin the
+  # QA-approved image to its immutable digest.
+  resolve-image:
+    name: Resolve the QA-approved image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - name: Find the merged QA pull request
+        id: qa
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_SHA: ${{ github.sha }}
+        run: |
+          # Look up PRs associated with this exact commit (no --limit guesswork).
+          PR_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${MERGE_SHA}/pulls")
+
+          QA_SHA=$(echo "$PR_JSON" | jq -r --arg sha "$MERGE_SHA" '
+            [ .[]
+              | select(.head.ref == "qa"
+                       and .merged_at != null
+                       and .merge_commit_sha == $sha) ]
+            | .[0].head.sha // empty')
+
+          if [ -z "$QA_SHA" ]; then
+            echo "No merged QA pull request found for this main commit."
+            exit 1
+          fi
+
+          echo "qa_sha=$QA_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Verify the QA-approved image and resolve its digest
+        id: image
+        env:
+          QA_SHA: ${{ steps.qa.outputs.qa_sha }}
+        run: |
+          TAG_REF="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:qa-${QA_SHA}"
+
+          # Fails if the tag does not exist.
+          DIGEST=$(docker buildx imagetools inspect "$TAG_REF" \
+            --format '{{.Manifest.Digest}}')
+
+          if [ -z "$DIGEST" ]; then
+            echo "Could not resolve a digest for $TAG_REF"
+            exit 1
+          fi
+
+          IMAGE="${DOCKERHUB_USERNAME}/${IMAGE_NAME}@${DIGEST}"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "Production will deploy QA-approved image: $TAG_REF"
+          echo "Pinned to digest: $IMAGE"
+
+  deploy-production:
+    name: Deploy to Production on AWS EC2
+    runs-on: [self-hosted, prod]
+    needs: resolve-image
+    timeout-minutes: 15
+
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Ensure the production database is running
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+          APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
+        run: sh scripts/ensure-db.sh prod
+
+      - name: Deploy the exact QA-tested image
+        env:
+          IMAGE: ${{ needs.resolve-image.outputs.image }}
+          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
+
+        run: |
+
+          set -e
+
+          HEALTH_URL="http://127.0.0.1/"
+
+          wait_healthy() {
+            for i in $(seq 1 20); do
+              if curl -fsS --max-time 2 "$HEALTH_URL" > /dev/null; then
+                return 0
+              fi
+
+              echo "Waiting for application..."
+              sleep 3
+            done
+
+            return 1
+          }
+
+          echo "$DOCKERHUB_TOKEN" | docker login \
+            --username "$DOCKERHUB_USERNAME" \
+            --password-stdin
+
+          echo "Pulling QA-tested image: $IMAGE"
+          docker pull "$IMAGE"
+
+          # Save previous image for rollback
+          PREVIOUS_IMAGE=$(docker inspect \
+            --format='{{.Config.Image}}' \
+            fc27-prod 2>/dev/null || true)
+
+          if [ -n "$PREVIOUS_IMAGE" ]; then
+            docker tag "$PREVIOUS_IMAGE" fc27-prod:rollback
+          fi
+
+          # Stop previous container
+          docker rm -f fc27-prod || true
+
+          # Deploy new container
+          docker run -d \
+            --name fc27-prod \
+            --restart unless-stopped \
+            --network fc27-prod-net \
+            -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-prod-db:5432/fc27" \
+            -p 127.0.0.1:8080:80 \
+            "$IMAGE"
+
+          echo "Checking production health..."
+
+          if wait_healthy; then
+            echo "Production deployment successful!"
+            docker image prune -f || true
+            exit 0
+          fi
+
+          echo "Health check failed. Rolling back..."
+
+          docker logs fc27-prod || true
+          docker rm -f fc27-prod || true
+
+          if [ -z "$PREVIOUS_IMAGE" ]; then
+            echo "No previous image available for rollback."
+            exit 1
+          fi
+
+          docker run -d \
+            --name fc27-prod \
+            --restart unless-stopped \
+            --network fc27-prod-net \
+            -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-prod-db:5432/fc27" \
+            -p 80:3000 \
+            fc27-prod:rollback
+
+          if wait_healthy; then
+            echo "Rollback succeeded."
+          else
+            echo "Rollback failed. Manual intervention required."
+            docker logs fc27-prod || true
+          fi
+
+          exit 1

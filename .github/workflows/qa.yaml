@@ -1,0 +1,377 @@
+name: QA-CI-CDD
+
+on:
+  push:
+    branches:
+      - qa
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+
+env:
+  NODE_VERSION: 22
+  IMAGE_NAME: fc27
+
+jobs:
+
+  resolve-dev-image:
+    name: Resolve the DEV-built image
+    runs-on: ubuntu-latest
+    outputs:
+      source_sha: ${{ steps.resolve.outputs.source_sha }}
+      image: ${{ steps.resolve.outputs.image }}
+    steps:
+      - name: Identify the merged DEV pull request
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}   # <
+          QA_MERGE_SHA: ${{ github.sha }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+        run: |
+          PR_DATA=$(gh pr list \
+            --state merged \
+            --base qa \
+            --json headRefName,headRefOid,mergeCommit \
+            --limit 100)
+
+          SOURCE_SHA=$(echo "$PR_DATA" | jq -r \
+            --arg sha "$QA_MERGE_SHA" \
+            '.[] | select(.headRefName == "dev" and .mergeCommit.oid == $sha) | .headRefOid' \
+            | head -n 1)
+
+          if [ -z "$SOURCE_SHA" ] || [ "$SOURCE_SHA" = "null" ]; then
+            echo "Could not find a merged DEV pull request for this QA commit."
+            echo "This workflow expects DEV to be merged into QA through a pull request."
+            exit 1
+          fi
+
+          IMAGE="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${SOURCE_SHA}"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "QA will validate image: $IMAGE"
+
+  lint:
+    name: Code Quality
+    needs: resolve-dev-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the exact DEV source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-dev-image.outputs.source_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+  security:
+    name: Security Scanning
+    needs: resolve-dev-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the exact DEV source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-dev-image.outputs.source_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate NPM audit report
+        run: npm audit --json > npm-audit.json || true
+
+      - name: Security gate - HIGH and CRITICAL
+        run: |
+          node -e '
+          const report = require("./npm-audit.json");
+          const vulnerabilities = report.metadata.vulnerabilities;
+          console.log("High:", vulnerabilities.high);
+          console.log("Critical:", vulnerabilities.critical);
+          if (vulnerabilities.high > 0 || vulnerabilities.critical > 0) {
+            console.error("Security gate failed!");
+            process.exit(1);
+          }
+          console.log("Security gate passed!");
+          '
+
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-security-report
+          path: npm-audit.json
+          if-no-files-found: ignore
+
+  codeql:
+    name: CodeQL SAST
+    needs: resolve-dev-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout the exact DEV source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-dev-image.outputs.source_sha }}
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+
+  tests:
+    name: Automated Tests
+    needs: resolve-dev-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the exact DEV source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-dev-image.outputs.source_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Test coverage
+        run: npm run test:coverage
+
+  # No Docker build happens in QA. QA pulls the image created by DEV.
+  verify-image:
+    name: Verify the DEV-built Docker image
+    needs: [resolve-dev-image, lint, security, codeql, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull the exact DEV image
+        env:
+          IMAGE: ${{ needs.resolve-dev-image.outputs.image }}
+        run: docker pull "$IMAGE"
+
+  deploy-qa:
+    name: Deploy the DEV-built image to QA
+    needs: [resolve-dev-image, verify-image]
+    runs-on: [self-hosted, dev]
+    steps:
+      - name: Checkout the exact DEV source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-dev-image.outputs.source_sha }}
+
+      - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          echo "$DOCKERHUB_TOKEN" | docker login \
+            --username "$DOCKERHUB_USERNAME" \
+            --password-stdin
+
+      - name: Pull the exact DEV image
+        env:
+          IMAGE: ${{ needs.resolve-dev-image.outputs.image }}
+        run: docker pull "$IMAGE"
+
+      - name: Ensure the QA database is running
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+          APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
+        run: sh scripts/ensure-db.sh qa
+
+      - name: Replace QA container
+        env:
+          IMAGE: ${{ needs.resolve-dev-image.outputs.image }}
+          APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
+        run: |
+          docker rm -f fc27-qa || true
+          docker run -d \
+            --name fc27-qa \
+            --restart unless-stopped \
+            --network fc27-qa-net \
+            -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-qa-db:5432/fc27" \
+            -p 3001:3000 \
+            "$IMAGE"
+
+  qa-validation:
+    name: QA Functional and E2E Tests
+    needs: [resolve-dev-image, deploy-qa]
+    runs-on: [self-hosted, dev]
+    steps:
+      - name: Checkout the exact DEV source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-dev-image.outputs.source_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run QA E2E tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: ${{ secrets.QA_URL }}
+
+  # DAST: scan the running QA deployment from the outside with OWASP ZAP.
+  # Runs in parallel with the E2E tests. This is a passive baseline scan
+  # (it spiders the app and inspects responses; it does not attack it).
+
+  dast:
+    - name: DAST (OWASP ZAP baseline)
+      needs: deploy-qa
+      runs-on: [self-hosted, dev]
+      timeout-minutes: 20
+
+      steps:
+        - name: Wait for the QA app to respond
+          env:
+            TARGET_URL: ${{ secrets.QA_URL }}
+          run: |
+            if [ -z "$TARGET_URL" ]; then
+              echo "QA_URL secret is EMPTY"
+              exit 1
+            fi
+
+            echo "Checking QA application..."
+
+            for i in $(seq 1 20); do
+              if curl -fsS --max-time 5 "$TARGET_URL" > /dev/null; then
+                echo "QA app is up."
+                exit 0
+              fi
+
+              echo "Waiting for QA app..."
+              sleep 5
+            done
+
+            echo "QA app did not become reachable."
+            exit 1
+
+        - name: Run ZAP baseline scan
+          env:
+            TARGET_URL: ${{ secrets.QA_URL }}
+          run: |
+            mkdir -p zap-wrk
+            chmod 777 zap-wrk
+
+            docker run --rm \
+              -v "$(pwd)/zap-wrk:/zap/wrk:rw" \
+              ghcr.io/zaproxy/zaproxy:stable \
+              zap-baseline.py \
+                -t "$TARGET_URL" \
+                -J zap-report.json \
+                -r zap-report.html \
+                -I
+
+        - name: DAST gate - HIGH alerts
+          run: |
+            node -e '
+            const report = require("./zap-wrk/zap-report.json");
+            const alerts = report.site.flatMap((s) => s.alerts);
+
+            const high = alerts.filter((a) => a.riskcode === "3");
+            const medium = alerts.filter((a) => a.riskcode === "2");
+
+            console.log("High:", high.length, "Medium:", medium.length);
+
+            high.forEach((a) => console.error("HIGH:", a.name));
+
+            if (high.length > 0) {
+              console.error("DAST gate failed!");
+              process.exit(1);
+            }
+
+            console.log("DAST gate passed!");
+            '
+
+        - name: Upload DAST report
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: zap-dast-report
+            path: |
+              zap-wrk/zap-report.html
+              zap-wrk/zap-report.json
+            if-no-files-found: ignore
+
+
+  # Configure required reviewers for this GitHub Environment to make this
+  # an actual manual QA approval gate.
+  qa-approval:
+    name: Manual QA approval
+    needs: [qa-validation, dast]
+    runs-on: ubuntu-latest
+    environment:
+      name: qa-approval
+    steps:
+      - name: QA approval granted
+        run: echo "QA approval granted."
+
+  # Publish a QA-specific tag only after QA validation and approval. This is a
+  # retag of the existing image, not a rebuild. Production resolves this tag.
+  publish-qa-image-tag:
+    name: Mark the exact image as QA-approved
+    needs: [resolve-dev-image, qa-approval]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Retag and push the already-tested image
+        env:
+          SOURCE_IMAGE: ${{ needs.resolve-dev-image.outputs.image }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          QA_COMMIT: ${{ github.sha }}
+        run: |
+          QA_IMAGE="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:qa-${QA_COMMIT}"
+          docker pull "$SOURCE_IMAGE"
+          docker tag "$SOURCE_IMAGE" "$QA_IMAGE"
+          docker push "$QA_IMAGE"
+          echo "QA-approved image: $QA_IMAGE"

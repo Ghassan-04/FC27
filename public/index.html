@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EA SPORTS FC 27 | Official Player Ratings Database & Search</title>
+  <meta name="description" content="Explore official EA SPORTS FC 27 player ratings, in-game stats, PlayStyles+, prices, and compare top Ultimate Team superstars.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,10 90,90 10,90' fill='%2300ff85'/></svg>">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="brand" title="Reset to Home">
+      <div class="brand-logo-triangle"></div>
+      <div class="brand-text">
+        <span class="brand-title">FC 27 RATINGS</span>
+        <span class="brand-tag">Ultimate Database</span>
+      </div>
+    </div>
+
+    <!-- Quick Navbar Search -->
+    <div class="nav-search">
+      <span class="nav-search-icon">🔍</span>
+      <input type="text" id="nav-search-input" class="nav-search-input" placeholder="Quick search player, club, nation... (Press '/' to focus)">
+    </div>
+
+    <!-- Navigation Links / Actions -->
+    <div class="nav-links">
+      <button class="nav-btn" id="squad-nav-btn" title="View Saved Dream XI">
+        <span>⭐ Dream XI</span>
+        <span class="nav-badge" id="squad-count-badge">0</span>
+      </button>
+
+      <button class="nav-btn" id="auth-nav-btn" title="Log in to save your Dream XI to your account">
+        <span id="auth-nav-label">👤 Log in</span>
+      </button>
+
+      <button class="nav-btn nav-btn-highlight" id="pack-nav-btn" title="Simulate FC 27 Pack Opening">
+        <span>⚡ Pack Opener</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-pill">
+        <span>🎮</span> Official FC 27 Database & Meta Search
+      </div>
+      <h1 class="hero-title">
+        DISCOVER THE NEXT ERA OF <span>FOOTBALL ICONS</span>
+      </h1>
+      <p class="hero-subtitle">
+        Search, filter, and compare official EA SPORTS FC™ 27 player ratings, PlayStyles+, in-game attributes, and estimated market values across Europe's elite leagues and Ultimate Team legends.
+      </p>
+
+      <!-- Quick Preset Filter Chips -->
+      <div class="hero-presets">
+        <button class="preset-chip" data-preset="90plus">🔥 90+ OVR Club</button>
+        <button class="preset-chip" data-preset="speed">⚡ Speed (92+ PAC)</button>
+        <button class="preset-chip" data-preset="skills5">⭐ 5★ Skillers</button>
+        <button class="preset-chip" data-preset="wf5">🎯 5★ Weak Foot</button>
+        <button class="preset-chip" data-preset="wonderkids">✨ Future Stars</button>
+        <button class="preset-chip" data-preset="toty_icons">🏆 TOTY & Icons</button>
+      </div>
+
+      <!-- Live Top Leader Stats Banner -->
+      <div class="stats-banner" id="stats-banner" style="width: 100%;">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Application Area -->
+  <main class="main-container">
+    <div class="app-layout">
+
+      <!-- Left Sidebar Filters -->
+      <aside class="filter-panel">
+        <div class="filter-header">
+          <div class="filter-title">
+            <span>⚙️</span> Filters
+          </div>
+          <button class="filter-reset-btn" id="reset-filters-btn">Reset All</button>
+        </div>
+
+        <!-- Text Search -->
+        <div class="filter-group">
+          <label class="filter-label" for="search-input">Search Player</label>
+          <input type="text" id="search-input" class="nav-search-input" style="border-radius: var(--radius-sm);" placeholder="e.g. Mbappé, Haaland, Real Madrid...">
+        </div>
+
+        <!-- Position Pills -->
+        <div class="filter-group">
+          <label class="filter-label">Position</label>
+          <div class="position-grid">
+            <button class="pos-pill active" data-pos="ALL">ALL</button>
+            <button class="pos-pill" data-pos="ATT">ATT</button>
+            <button class="pos-pill" data-pos="MID">MID</button>
+            <button class="pos-pill" data-pos="DEF">DEF</button>
+            <button class="pos-pill" data-pos="GK">GK</button>
+            <button class="pos-pill" data-pos="ST">ST</button>
+            <button class="pos-pill" data-pos="CAM">CAM</button>
+            <button class="pos-pill" data-pos="CM">CM</button>
+            <button class="pos-pill" data-pos="CDM">CDM</button>
+            <button class="pos-pill" data-pos="CB">CB</button>
+            <button class="pos-pill" data-pos="LB">LB</button>
+            <button class="pos-pill" data-pos="RB">RB</button>
+            <button class="pos-pill" data-pos="LW">LW</button>
+            <button class="pos-pill" data-pos="RW">RW</button>
+          </div>
+        </div>
+
+        <!-- Overall Rating Range -->
+        <div class="filter-group">
+          <div class="filter-label">
+            <span>Overall Rating</span>
+            <span class="filter-val-badge" id="rating-val-badge">75 - 99</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" class="range-input" id="rating-min-slider" min="75" max="99" value="75">
+            <input type="range" class="range-input" id="rating-max-slider" min="75" max="99" value="99">
+            <div class="slider-limits">
+              <span>75 OVR</span>
+              <span>99 OVR</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stat Range Sliders -->
+        <div class="filter-group">
+          <div class="filter-label">
+            <span>Min Pace (PAC)</span>
+            <span class="filter-val-badge" id="pace-val-badge">0+</span>
+          </div>
+          <input type="range" class="range-input" id="pace-min-slider" min="0" max="99" value="0">
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-label">
+            <span>Min Shooting (SHO)</span>
+            <span class="filter-val-badge" id="shooting-val-badge">0+</span>
+          </div>
+          <input type="range" class="range-input" id="shooting-min-slider" min="0" max="99" value="0">
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-label">
+            <span>Min Dribbling (DRI)</span>
+            <span class="filter-val-badge" id="dribbling-val-badge">0+</span>
+          </div>
+          <input type="range" class="range-input" id="dribbling-min-slider" min="0" max="99" value="0">
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-label">
+            <span>Min Defending (DEF)</span>
+            <span class="filter-val-badge" id="defending-val-badge">0+</span>
+          </div>
+          <input type="range" class="range-input" id="defending-min-slider" min="0" max="99" value="0">
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-label">
+            <span>Min Physical (PHY)</span>
+            <span class="filter-val-badge" id="physical-val-badge">0+</span>
+          </div>
+          <input type="range" class="range-input" id="physical-min-slider" min="0" max="99" value="0">
+        </div>
+
+        <!-- Dropdowns -->
+        <div class="filter-group">
+          <label class="filter-label" for="league-select">League</label>
+          <select id="league-select" class="filter-select">
+            <option value="ALL">All Leagues</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label" for="nation-select">Nationality</label>
+          <select id="nation-select" class="filter-select">
+            <option value="ALL">All Nations</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label" for="club-select">Club</label>
+          <select id="club-select" class="filter-select">
+            <option value="ALL">All Clubs</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label" for="card-type-select">Card Rarity</label>
+          <select id="card-type-select" class="filter-select">
+            <option value="ALL">All Card Types</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label" for="playstyle-select">PlayStyle / PlayStyle+</label>
+          <select id="playstyle-select" class="filter-select">
+            <option value="ALL">All PlayStyles</option>
+          </select>
+        </div>
+      </aside>
+
+      <!-- Right Main Results -->
+      <section class="results-area">
+
+        <!-- Results Header Controls -->
+        <div class="results-header-bar">
+          <div class="results-count" id="results-count">
+            Loading FC 27 Database...
+          </div>
+
+          <div class="results-controls">
+            <!-- Sort By -->
+            <div class="sort-container">
+              <span>Sort:</span>
+              <select id="sort-select" class="sort-select">
+                <option value="rating">Overall Rating</option>
+                <option value="pac">Pace</option>
+                <option value="sho">Shooting</option>
+                <option value="pas">Passing</option>
+                <option value="dri">Dribbling</option>
+                <option value="def">Defending</option>
+                <option value="phy">Physicality</option>
+                <option value="price">Market Value</option>
+                <option value="name">Name (A-Z)</option>
+                <option value="age">Age</option>
+              </select>
+              <button class="sort-order-btn" id="sort-order-btn" title="Toggle Sort Order">↓</button>
+            </div>
+
+            <!-- View Switcher -->
+            <div class="view-mode-group">
+              <button class="view-btn active" id="view-grid-btn" title="FUT Card View">🎴</button>
+              <button class="view-btn" id="view-table-btn" title="Table Spreadsheet View">📋</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Removable Active Tags Bar -->
+        <div class="active-tags-bar" id="active-tags-bar"></div>
+
+        <!-- Card Grid View -->
+        <div class="player-grid" id="player-grid"></div>
+
+        <!-- Table List View (Hidden by default) -->
+        <div class="table-container" id="player-table-container" style="display: none;">
+          <table class="players-table">
+            <thead>
+              <tr>
+                <th>OVR</th>
+                <th>Player</th>
+                <th>POS</th>
+                <th>Club</th>
+                <th>League</th>
+                <th>PAC</th>
+                <th>SHO</th>
+                <th>PAS</th>
+                <th>DRI</th>
+                <th>DEF</th>
+                <th>PHY</th>
+                <th>Skills/WF</th>
+                <th>Est. Value</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="player-table-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-bar" id="pagination-container"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Floating Compare Tray -->
+  <div class="compare-tray" id="compare-tray">
+    <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">
+      Compare Players (<span id="compare-count">2-3</span>):
+    </div>
+    <div class="compare-tray-cards" id="compare-slots"></div>
+    <button class="nav-btn nav-btn-highlight" id="open-compare-modal-btn">
+      Compare Head-to-Head ⚖️
+    </button>
+  </div>
+
+  <!-- Player Detail Modal -->
+  <div class="modal-backdrop" id="detail-modal">
+    <div class="modal-card">
+      <button class="modal-close-btn" title="Close">×</button>
+      <div id="detail-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Compare Modal -->
+  <div class="modal-backdrop" id="compare-modal">
+    <div class="modal-card" style="max-width: 950px;">
+      <button class="modal-close-btn" title="Close">×</button>
+      <div id="compare-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Dream Squad Modal -->
+  <div class="modal-backdrop" id="squad-modal">
+    <div class="modal-card" style="max-width: 800px;">
+      <button class="modal-close-btn" title="Close">×</button>
+      <div id="squad-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Login / Register / Account Modal -->
+  <div class="modal-backdrop" id="auth-modal">
+    <div class="modal-card" style="max-width: 420px;">
+      <button class="modal-close-btn" title="Close">×</button>
+      <div id="auth-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Pack Opener Modal -->
+  <div class="modal-backdrop" id="pack-modal">
+    <div class="modal-card" style="max-width: 850px;">
+      <button class="modal-close-btn" title="Close">×</button>
+      <div id="pack-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Walkout Explosion Fullscreen Overlay -->
+  <div class="walkout-overlay" id="walkout-overlay"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-top">
+        <div class="brand">
+          <div class="brand-logo-triangle"></div>
+          <div class="brand-text">
+            <span class="brand-title">EA SPORTS FC 27</span>
+            <span class="brand-tag">Player Ratings Database</span>
+          </div>
+        </div>
+        <p style="color: var(--text-muted); max-width: 480px; font-size: 0.8rem;">
+          The next-generation player ratings database for EA SPORTS FC 27. Filter by in-depth game attributes, PlayStyles+, alternative positions, and chemistry ratings.
+        </p>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026-2027 FC 27 Database Engine. Designed for football enthusiasts.</span>
+        <span>Built with Node.js & Modern Web Standards</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
