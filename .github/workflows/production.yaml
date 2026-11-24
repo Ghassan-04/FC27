@@ -96,6 +96,7 @@ jobs:
           APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
         run: sh scripts/ensure-db.sh prod
 
+
       - name: Deploy the exact QA-tested image
         env:
           IMAGE: ${{ needs.resolve-image.outputs.image }}
@@ -105,41 +106,46 @@ jobs:
         run: |
           set -e
 
-          HEALTH_URL="http://127.0.0.1/"
+          HEALTH_URL="http://127.0.0.1:8080/health"
 
           wait_healthy() {
-            for i in $(seq 1 20); do
-              if curl -fsS --max-time 2 "$HEALTH_URL" > /dev/null; then
+            for i in $(seq 1 30); do
+              if curl -fsS --max-time 3 "$HEALTH_URL"; then
+                echo ""
+                echo "Application is healthy!"
                 return 0
               fi
 
-              echo "Waiting for application..."
-              sleep 3
+              echo "Waiting for application... ($i/30)"
+              sleep 2
             done
 
             return 1
           }
 
-          echo "$DOCKERHUB_TOKEN" | docker login \
+          docker login \
             --username "$DOCKERHUB_USERNAME" \
-            --password-stdin
+            --password-stdin <<< "$DOCKERHUB_TOKEN"
 
           echo "Pulling QA-tested image: $IMAGE"
           docker pull "$IMAGE"
 
-          # Save previous image for rollback
+          # Preserve the previous production image
           PREVIOUS_IMAGE=$(docker inspect \
             --format='{{.Config.Image}}' \
             fc27-prod 2>/dev/null || true)
 
           if [ -n "$PREVIOUS_IMAGE" ]; then
             docker tag "$PREVIOUS_IMAGE" fc27-prod:rollback
+            echo "Previous image saved for rollback."
+          else
+            echo "No previous production container found."
           fi
 
-          # Stop previous container
+          # Stop old production container
           docker rm -f fc27-prod || true
 
-          # Deploy new container
+          # Deploy new production container
           docker run -d \
             --name fc27-prod \
             --restart unless-stopped \
@@ -152,7 +158,6 @@ jobs:
 
           if wait_healthy; then
             echo "Production deployment successful!"
-            docker image prune -f || true
             exit 0
           fi
 
@@ -171,7 +176,7 @@ jobs:
             --restart unless-stopped \
             --network fc27-prod-net \
             -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-prod-db:5432/fc27" \
-            -p 80:3000 \
+            -p 127.0.0.1:8080:3000 \
             fc27-prod:rollback
 
           if wait_healthy; then
