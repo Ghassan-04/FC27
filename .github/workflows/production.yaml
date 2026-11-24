@@ -145,7 +145,7 @@ jobs:
             --restart unless-stopped \
             --network fc27-prod-net \
             -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-prod-db:5432/fc27" \
-            -p 80:3000 \
+            -p 127.0.0.1:8080:3000 \
             "$IMAGE"
 
           echo "Checking production health..."
