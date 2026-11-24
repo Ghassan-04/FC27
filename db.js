@@ -4,11 +4,34 @@ const { Pool } = require('pg');
 
 let pool = null;
 
+// Turns DATABASE_URL into discrete pool options. The standard URL parser throws
+// "Invalid URL" when the password contains characters like / + ? # (e.g. random
+// base64 passwords), which made every account request fail with "Server error".
+// Splitting manually at the LAST "@" accepts any password.
+function parseDatabaseUrl(raw) {
+  const m = /^postgres(?:ql)?:\/\/([^:/@]+):(.*)@([^@/:?#]+)(?::(\d+))?\/([^?#]+)(?:[?#].*)?$/.exec(raw);
+  if (!m) return { connectionString: raw };
+  const safeDecode = (v) => {
+    try {
+      return decodeURIComponent(v);
+    } catch {
+      return v;
+    }
+  };
+  return {
+    user: safeDecode(m[1]),
+    password: safeDecode(m[2]),
+    host: m[3],
+    port: m[4] ? Number(m[4]) : 5432,
+    database: safeDecode(m[5]),
+  };
+}
+
 function getPool() {
   if (!process.env.DATABASE_URL) return null;
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      ...parseDatabaseUrl(process.env.DATABASE_URL),
       max: 10,
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000,
@@ -62,4 +85,4 @@ async function closeDb() {
   pool = null;
 }
 
-module.exports = { query, transaction, isConfigured, checkDb, closeDb };
+module.exports = { parseDatabaseUrl, query, transaction, isConfigured, checkDb, closeDb };
