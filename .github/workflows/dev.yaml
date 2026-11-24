@@ -1,5 +1,5 @@
 name: app-workflow
-####
+
 on:
   push:
     branches:
@@ -67,8 +67,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      # The commit SHA is an immutable release identifier. QA and Production
-      # will promote this exact image instead of rebuilding the application.
+      # Build once and tag the image with the commit SHA so later
+      # environments can promote the exact same image.
       - name: Build and push DEV image
         uses: docker/build-push-action@v7
         with:
@@ -79,14 +79,24 @@ jobs:
             ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:dev-latest
 
+      - name: Ensure the DEV database is running
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+          APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
+        run: sh scripts/ensure-db.sh dev
+
       - name: Deploy the exact DEV image
         env:
           IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          APP_DB_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
         run: |
+          set -e
           docker pull "$IMAGE"
           docker rm -f app || true
           docker run -d \
             --name app \
             --restart unless-stopped \
+            --network fc27-dev-net \
+            -e DATABASE_URL="postgres://fc27_app:${APP_DB_PASSWORD}@fc27-dev-db:5432/fc27" \
             -p 3000:3000 \
             "$IMAGE"

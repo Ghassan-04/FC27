@@ -1,15 +1,17 @@
-FROM node
+FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package*.json .
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-RUN npm install
-COPY . . 
+COPY . .
+
+ENV NODE_ENV=production PORT=3000
 EXPOSE 3000
-ENV PORT=3000
 
-CMD ["npm", "start"]
+# Do not run as root
+USER node
 
-
+CMD ["node", "server.js"]
 

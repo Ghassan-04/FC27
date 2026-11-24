@@ -1,1 +1,9 @@
 .github
+
+node_modules
+.env
+.git
+coverage
+db
+docker-compose.yml
+
